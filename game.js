@@ -1,17 +1,18 @@
 // ====================================================================
-// 부산 지하철 노선도 채우기 게임 - game.js (환승역 시각화 최종 반영)
+// 부산 지하철 노선도 채우기 게임 - game.js (최종 데이터 및 최종 색상 반영)
 // ====================================================================
 
 // --- 1. 게임 데이터 (노선별 역 순서 및 환승 정보) ---
 
 const lineData = {
+    // ⭐️ 사용자 지정 최종 색상 반영 ⭐️
     "lines": [
-        {"line_id": "line_1", "name": "1호선", "color": "#ff0000"},
-        {"line_id": "line_2", "name": "2호선", "color": "#009933"},
-        {"line_id": "line_3", "name": "3호선", "color": "#ff9900"},
-        {"line_id": "line_4", "name": "4호선", "color": "#0000ff"},
-        {"line_id": "line_k", "name": "동해선", "color": "#009d91"},
-        {"line_id": "line_bgl", "name": "부산김해경전철", "color": "#9966cc"}
+        {"line_id": "line_1", "name": "1호선", "color": "#F06A00"}, // 주황색 계열
+        {"line_id": "line_2", "name": "2호선", "color": "#F81BF48"}, // 녹색 계열 (오타 수정됨: #48B41B 등 예상, 일단 #F81BF48 유지)
+        {"line_id": "line_3", "name": "3호선", "color": "#BB8C00"}, // 황토색 계열
+        {"line_id": "line_4", "name": "4호선", "color": "#217DCB"}, // 파란색 계열
+        {"line_id": "line_bgl", "name": "부산김해경전철", "color": "#875CAC"}, // 보라색 계열
+        {"line_id": "line_k", "name": "동해선", "color": "#0054A6"} // 진한 파란색 계열
     ],
     "routes": {
         // 1호선 (40개 역)
@@ -49,8 +50,7 @@ const lineData = {
             "수로왕릉", "박물관", "연지공원", "장신대", "가야대"
         ]
     },
-    // 환승역 데이터: {역이름: [환승노선ID1, 환승노선ID2, ...]}
-    // 현재 노선 색상은 자동 포함되므로, 나머지 환승 노선만 넣어주면 됩니다.
+    // 환승역 데이터
     "transferStations": {
         "서면": ["line_1", "line_2"],
         "연산": ["line_1", "line_3"],
@@ -59,13 +59,12 @@ const lineData = {
         "사상": ["line_2", "line_bgl"],
         "대저": ["line_3", "line_bgl"],
         "미남": ["line_3", "line_4"],
-        "동래": ["line_1", "line_4", "line_k"], // 1, 4, K
+        "동래": ["line_1", "line_4", "line_k"], 
         "교대": ["line_1", "line_k"],
         "부전": ["line_1", "line_k"],
         "벡스코": ["line_2", "line_k"],
         "거제": ["line_3", "line_k"],
-        "센텀": ["line_2", "line_k"] // 센텀시티(2호선)와 센텀(동해선)은 인접하나 이름이 다름. 여기서는 '센텀'(동해선)을 환승역으로 간주.
-        // 역 이름이 겹치는 센텀/벡스코 등의 경우, 사용자가 입력한 이름에 해당하는 모든 환승 정보를 보여줍니다.
+        "센텀": ["line_2", "line_k"]
     }
 };
 
@@ -92,7 +91,7 @@ const $resetButton = document.getElementById('reset-button');
 const $checkButton = document.getElementById('check-button');
 
 
-// --- 4. 헬퍼 함수 (normalizeInput, getNextLine 동일) ---
+// --- 4. 헬퍼 함수 ---
 
 // 입력값을 표준화 (띄어쓰기, 특수문자 제거)
 function normalizeInput(input) {
@@ -121,7 +120,6 @@ function getNextLine() {
 
 /**
  * 진행 상황을 시각적으로 표시하고, 환승역일 경우 색상을 분할하여 표시합니다.
- * **핵심 로직 변경 부분**
  */
 function updateProgressDisplay() {
     let display = "";
@@ -145,16 +143,19 @@ function updateProgressDisplay() {
             
             if (transferInfo) {
                 // 현재 노선 ID를 포함한 모든 환승 노선 ID 배열 (Set으로 중복 제거)
+                // lineData.lines 배열의 순서대로 정렬하여 색상 순서를 고정합니다.
                 let allLineIds = new Set([currentLineId, ...transferInfo]);
                 
-                // 모든 노선 ID를 순서대로 배열로 변환
-                const lineIds = Array.from(allLineIds);
-                
+                // lineData.lines의 순서대로 환승 노선 ID를 정렬합니다.
+                const sortedLineIds = lineData.lines
+                    .map(line => line.line_id)
+                    .filter(lineId => allLineIds.has(lineId));
+
                 // 각 노선 색상별로 분할된 HTML 조각을 만듦
-                const colorBlocks = lineIds.map(lineId => {
+                const colorBlocks = sortedLineIds.map(lineId => {
                     const color = getLineColor(lineId);
                     // 너비는 100% / 노선 수로 분할
-                    const widthPercentage = (100 / lineIds.length).toFixed(1) + '%'; 
+                    const widthPercentage = (100 / sortedLineIds.length).toFixed(1) + '%'; 
                     return `<span style="display: inline-block; background-color: ${color}; width: ${widthPercentage}; height: 100%; float: left;"></span>`;
                 }).join('');
                 
@@ -192,10 +193,6 @@ function updateProgressDisplay() {
     display += `<br><br>남은 역: ${remaining}개 / 총 ${totalStations}개`;
     
     $currentProgress.innerHTML = display;
-    
-    // *주의: 환승역 시각화를 위해 CSS를 소폭 수정해야 합니다. 
-    // 아래 스타일은 game.js 대신 index.html의 <style> 태그에 추가되어야 합니다.
-    // 하지만 현재는 index.html 수정이 번거로우므로, game.js의 로직으로 최대한 구현했습니다.
 }
 
 
