@@ -8,9 +8,7 @@
         /* 기본 스타일 */
         body { font-family: 'Arial', sans-serif; text-align: center; margin: 20px; background-color: #f4f4f4; }
         h1 { color: #333; margin-bottom: 5px; }
-        #game-container { background-color: #fff; padding: 25px; border-radius: 12px; max-width: 700px; margin: 20px auto; box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
-
-        /* 점수판 */
+        #game-container { background-color: #fff; padding: 25px; border-radius: 12px; max-width: 900px; margin: 20px auto; box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
         #score-board { margin-bottom: 25px; font-size: 1.3em; color: #555; }
         #score-board span { font-weight: bold; color: #007bff; margin: 0 5px; }
 
@@ -18,18 +16,61 @@
         #question-box { margin-bottom: 30px; padding: 20px; border: 2px solid #ddd; border-radius: 8px; background-color: #f9f9f9; }
         #line-display { font-size: 1.8em; font-weight: 900; margin-bottom: 15px; }
         
-        /* 진행 상황 표시 */
+        /* 🎨 노선도 시각화 (핵심: 텍스트를 노선처럼 보이게 함) */
         #current-progress { 
-            font-family: 'Consolas', monospace; 
+            font-family: 'Malgun Gothic', 'Arial', sans-serif; 
             font-size: 1.1em; 
-            white-space: pre-wrap; 
+            white-space: normal;
             text-align: center; 
-            background-color: #eee; 
-            padding: 15px 10px; 
+            background-color: #fff; 
+            padding: 20px 10px; 
             border-radius: 6px; 
-            line-height: 1.8;
+            line-height: 2.2; /* 줄 간격 넓게 */
             word-break: break-word;
+            border: 1px solid #ddd;
         }
+        
+        /* 연결선 및 역 디자인 */
+        #current-progress .station-wrapper {
+            display: inline-block;
+            margin: 0 5px;
+            text-align: center;
+        }
+
+        #current-progress .station-name {
+            display: block;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-weight: normal;
+        }
+
+        /* 뽕 채워진 역 */
+        #current-progress .correct { 
+            background-color: #28a745; 
+            color: white; 
+            font-weight: bold;
+        }
+        
+        /* 뽕 뚫린 역 */
+        #current-progress .placeholder { 
+            background-color: #f0f0f0; 
+            color: #ccc; 
+            border: 1px dashed #aaa;
+            /* 역 이름을 알 수 없도록 흰색으로 가림 */
+            color: transparent; 
+            user-select: none;
+        }
+        
+        /* 연결 라인 디자인 (노선색 대신 통일된 색상 사용) */
+        #current-progress .connector {
+            display: inline-block;
+            width: 25px;
+            height: 3px;
+            background-color: #007bff;
+            margin: 0 -5px; 
+            vertical-align: middle;
+        }
+
 
         /* 입력 및 버튼 */
         #input-area { display: flex; justify-content: center; gap: 10px; margin-top: 25px; }
@@ -63,12 +104,7 @@
         
         /* 메시지 */
         #message { margin-top: 20px; min-height: 20px; }
-
-        /* 상태별 텍스트 */
-        .correct { color: #28a745; font-weight: bold; }
         .missed { color: #dc3545; font-weight: bold; }
-        .placeholder { color: #aaa; }
-        .next-station { color: #dc3545; font-weight: bold; text-decoration: underline; }
         
         /* 컨트롤 버튼 */
         #control-buttons { margin-top: 20px; }
@@ -83,7 +119,6 @@
         }
         #start-button { background-color: #28a745; color: white; }
         #reset-button { background-color: #ffc107; color: #333; }
-
     </style>
 </head>
 <body>
@@ -91,7 +126,7 @@
         <h1>🚇 부산 지하철 노선도 채우기 게임</h1>
         
         <div id="score-board">
-            총점: <span id="score-value">0</span> | 연속 정답: <span id="streak-value">0</span>
+            총점: <span id="score-value">0</span>
         </div>
         
         <div id="question-box">
@@ -100,11 +135,11 @@
         </div>
 
         <div id="input-area">
-            <input type="text" id="station-input" placeholder="다음 역 이름을 입력하세요" disabled>
+            <input type="text" id="station-input" placeholder="역 이름을 자유롭게 입력하세요" disabled>
             <button id="check-button" disabled>확인 (Enter)</button>
         </div>
         
-        <p id="message">시작 버튼을 눌러 게임을 시작하세요.</p>
+        <p id="message">시작 버튼을 눌러 새로운 게임을 시작하세요.</p>
         
         <div id="control-buttons">
             <button id="start-button">게임 시작</button>
