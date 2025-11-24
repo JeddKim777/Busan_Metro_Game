@@ -1,5 +1,5 @@
 // ====================================================================
-// 부산 지하철 노선도 채우기 게임 
+// 부산 지하철 노선도 채우기 게임 - game.js (최종 데이터 및 자유 입력 로직)
 // ====================================================================
 
 // --- 1. 게임 데이터 (노선별 역 순서) ---
@@ -14,35 +14,35 @@ const lineData = {
         {"line_id": "line_bgl", "name": "부산김해경전철", "color": "#9966cc"}
     ],
     "routes": {
-        // 1호선
+        // 1호선 (40개 역)
         "line_1": [
             "다대포해수욕장", "다대포항", "낫개", "신장림", "장림", "동매", "신평", "하단", "당리", "사하", "괴정", "대티", 
             "서대신", "동대신", "토성", "자갈치", "남포", "중앙", "부산역", "초량", "부산진", "좌천", "범일", "범내골", "서면", 
             "부전", "양정", "시청", "연산", "교대", "동래", "명륜", "온천장", "부산대", "장전", "구서", "두실", "남산", 
             "범어사", "노포"
         ],
-        // 2호선 
+        // 2호선 (43개 역)
         "line_2": [
             "장산", "중동", "해운대", "동백", "벡스코", "센텀시티", "민락", "수영", "광안", "금련산", "남천", "경성대부경대", 
             "대연", "못골", "지게골", "문현", "국제금융센터부산은행", "전포", "서면", "부암", "가야", "동의대", "개금", 
             "냉정", "주례", "감전", "사상", "덕포", "모덕", "모라", "구남", "구명", "덕천", "수정", "화명", "율리", "동원", 
             "금곡", "호포", "증산", "부산대양산캠퍼스", "남양산", "양산"
         ],
-        // 3호선
+        // 3호선 (17개 역)
         "line_3": [
             "수영", "망미", "배산", "물만골", "연산", "거제", "종합운동장", "사직", "미남", "만덕", "남산정", "숙등", 
             "덕천", "구포", "강서구청", "체육공원", "대저"
         ],
-        // 4호선
+        // 4호선 (14개 역)
         "line_4": [
             "미남", "동래", "수안", "낙민", "충렬사", "명장", "서동", "금사", "반여농산물시장", "석대", "영산대", "윗반송", "고촌", "안평"
         ],
-        // 동해선
+        // 동해선 (24개 역)
         "line_k": [
             "부전", "거제해맞이", "거제", "교대", "동래", "안락", "부산원동", "재송", "센텀", "벡스코", 
             "신해운대", "송정", "오시리아", "기장", "일광", "좌천", "월내", "고리", "서생", "남창", "망양", "덕하", "개운포", "태화강" 
         ],
-        // 부산김해경전철
+        // 부산김해경전철 (21개 역)
         "line_bgl": [
             "사상", "괘법르네시떼", "서부산유통지구", "공항", "덕두", "등구", "대저", "평강", "대사", 
             "불암", "지내", "김해대학", "인제대", "김해시청", "부원", "봉황", 
@@ -76,7 +76,7 @@ const $checkButton = document.getElementById('check-button');
 
 // --- 4. 헬퍼 함수 ---
 
-// 입력값을 표준화 
+// 입력값을 표준화 (띄어쓰기, 특수문자 제거)
 function normalizeInput(input) {
     return input.trim()
                 .replace(/ /g, '')
@@ -101,7 +101,7 @@ function getNextLine() {
     return nextLineId;
 }
 
-// 진행 상황을 시각적으로 표시
+// 진행 상황을 시각적으로 표시 (맞춘 역은 채워지고, 나머지는 뚫려 있음)
 function updateProgressDisplay() {
     let display = "";
     const totalGuessed = guessedStations.size;
@@ -113,14 +113,16 @@ function updateProgressDisplay() {
         // 1. 역 이름 블록
         let stationHtml;
         if (guessedStations.has(stationName)) {
+            // 정답: 노선 색상으로 채우기
             stationHtml = `<span class="station-name correct" style="background-color: ${lineInfo.color};">${stationName}</span>`;
         } else {
+            // 미정답: 빈 블록
             stationHtml = `<span class="station-name placeholder">${'•'.repeat(stationName.length)}</span>`; 
         }
 
         display += `<span class="station-wrapper">${stationHtml}</span>`;
         
-        // 2. 연결선
+        // 2. 연결선 (노선 색상 적용)
         if (i < currentRoute.length - 1) {
             display += `<span class="connector" style="background-color: ${lineInfo.color};"></span>`; 
         }
@@ -146,6 +148,7 @@ function startGame() {
     $startButton.style.display = 'none';
     $resetButton.style.display = 'inline-block';
     
+    // 입력 기능 활성화
     $stationInput.disabled = false;
     $checkButton.disabled = false;
     $stationInput.focus();
@@ -174,7 +177,7 @@ function startNextLine() {
     updateProgressDisplay();
 }
 
-// 정답 확인 (자유 입력)
+// 정답 확인 (자유 입력 로직)
 function checkAnswer() {
     if (!gameStarted) return;
     
@@ -183,6 +186,7 @@ function checkAnswer() {
 
     const normalizedInput = normalizeInput(input);
     
+    // 순서 무시, 노선 내 전체 역에서 검색하여 일치하는 역을 찾음
     const correctStation = currentRoute.find(station => normalizeInput(station) === normalizedInput);
     
     if (correctStation) {
@@ -215,6 +219,7 @@ function checkAnswer() {
             $stationInput.disabled = true;
             $checkButton.disabled = true;
             
+            // 3초 후 다음 라운드 시작
             setTimeout(() => {
                 $stationInput.disabled = false;
                 $checkButton.disabled = false;
@@ -255,6 +260,7 @@ window.onload = () => {
     $resetButton.addEventListener('click', resetGame);
     $checkButton.addEventListener('click', checkAnswer);
 
+    // Enter 키로 정답 확인 기능
     $stationInput.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
             event.preventDefault(); 
@@ -264,4 +270,3 @@ window.onload = () => {
 
     resetGame();
 };
-
