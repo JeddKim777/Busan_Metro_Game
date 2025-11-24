@@ -1,18 +1,18 @@
 // ====================================================================
-// 부산 지하철 노선도 채우기 게임 - game.js (최종 데이터 및 최종 색상 반영)
+// 부산 지하철 노선도 채우기 게임 - game.js (최종 완성본)
 // ====================================================================
 
 // --- 1. 게임 데이터 (노선별 역 순서 및 환승 정보) ---
 
 const lineData = {
-    // ⭐️ 사용자 지정 최종 색상 반영 ⭐️
+    // ⭐️ 사용자 지정 최종 색상 반영 (2호선 유효 색상으로 수정) ⭐️
     "lines": [
-        {"line_id": "line_1", "name": "1호선", "color": "#F06A00"}, // 주황색 계열
-        {"line_id": "line_2", "name": "2호선", "color": "#F81BF48"}, // 녹색 계열 (오타 수정됨: #48B41B 등 예상, 일단 #F81BF48 유지)
-        {"line_id": "line_3", "name": "3호선", "color": "#BB8C00"}, // 황토색 계열
-        {"line_id": "line_4", "name": "4호선", "color": "#217DCB"}, // 파란색 계열
-        {"line_id": "line_bgl", "name": "부산김해경전철", "color": "#875CAC"}, // 보라색 계열
-        {"line_id": "line_k", "name": "동해선", "color": "#0054A6"} // 진한 파란색 계열
+        {"line_id": "line_1", "name": "1호선", "color": "#F06A00"}, // 주황
+        {"line_id": "line_2", "name": "2호선", "color": "#48B41B"}, // 녹색 (사용자 입력 #F81BF48을 유효한 녹색 #48B41B로 수정)
+        {"line_id": "line_3", "name": "3호선", "color": "#BB8C00"}, // 황토
+        {"line_id": "line_4", "name": "4호선", "color": "#217DCB"}, // 파랑
+        {"line_id": "line_bgl", "name": "부산김해경전철", "color": "#875CAC"}, // 보라
+        {"line_id": "line_k", "name": "동해선", "color": "#0054A6"} // 진한 파랑
     ],
     "routes": {
         // 1호선 (40개 역)
@@ -50,7 +50,7 @@ const lineData = {
             "수로왕릉", "박물관", "연지공원", "장신대", "가야대"
         ]
     },
-    // 환승역 데이터
+    // 환승역 데이터 (환승 노선 색상 분할 시각화를 위해 사용)
     "transferStations": {
         "서면": ["line_1", "line_2"],
         "연산": ["line_1", "line_3"],
@@ -129,7 +129,7 @@ function updateProgressDisplay() {
     // 노선 ID를 색상 코드로 변환하는 헬퍼 함수
     const getLineColor = (lineId) => {
         const info = lineData.lines.find(l => l.line_id === lineId);
-        return info ? info.color : '#aaaaaa'; // 기본값 회색
+        return info ? info.color : '#aaaaaa'; 
     };
     
     for (let i = 0; i < currentRoute.length; i++) {
@@ -142,8 +142,6 @@ function updateProgressDisplay() {
             const transferInfo = lineData.transferStations[stationName];
             
             if (transferInfo) {
-                // 현재 노선 ID를 포함한 모든 환승 노선 ID 배열 (Set으로 중복 제거)
-                // lineData.lines 배열의 순서대로 정렬하여 색상 순서를 고정합니다.
                 let allLineIds = new Set([currentLineId, ...transferInfo]);
                 
                 // lineData.lines의 순서대로 환승 노선 ID를 정렬합니다.
@@ -154,7 +152,6 @@ function updateProgressDisplay() {
                 // 각 노선 색상별로 분할된 HTML 조각을 만듦
                 const colorBlocks = sortedLineIds.map(lineId => {
                     const color = getLineColor(lineId);
-                    // 너비는 100% / 노선 수로 분할
                     const widthPercentage = (100 / sortedLineIds.length).toFixed(1) + '%'; 
                     return `<span style="display: inline-block; background-color: ${color}; width: ${widthPercentage}; height: 100%; float: left;"></span>`;
                 }).join('');
