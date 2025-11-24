@@ -1,10 +1,4 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚇 부산 지하철 노선도 채우기 게임</title>
-    <style>
+<style>
         /* 기본 레이아웃 및 스타일 */
         body { font-family: 'Arial', sans-serif; text-align: center; margin: 20px; background-color: #f4f4f4; }
         h1 { color: #333; margin-bottom: 5px; }
@@ -74,6 +68,25 @@
             margin: 0 -5px; 
             vertical-align: middle;
         }
+        
+        /* ⭐️ 환승역 다중 색상 시각화 CSS 추가 ⭐️ */
+        #current-progress .transfer-station {
+            padding: 0 5px; /* 내부 패딩 제거 (색상 분할을 위해) */
+            height: 25px; /* 높이 고정 (색상 분할 레이어와 맞추기) */
+            line-height: 25px; /* 텍스트 중앙 정렬 */
+            overflow: hidden;
+            position: relative;
+        }
+        
+        #current-progress .transfer-station .station-text {
+            /* 텍스트가 여러 색상 위로 올라오게 z-index 설정 */
+            position: relative;
+            z-index: 2; 
+            display: block;
+            text-shadow: 1px 1px 2px #00000080; /* 어두운 그림자로 가독성 높이기 */
+            padding: 0 2px; /* 텍스트 자체의 좌우 여백 */
+        }
+        /* ⭐️ 환승역 다중 색상 시각화 CSS 끝 ⭐️ */
 
 
         /* 입력 및 버튼 */
@@ -122,33 +135,3 @@
         #start-button { background-color: #28a745; color: white; }
         #reset-button { background-color: #ffc107; color: #333; }
     </style>
-</head>
-<body>
-    <div id="game-container">
-        <h1>🚇 부산 지하철 노선도 채우기 게임</h1>
-        
-        <div id="score-board">
-            총점: <span id="score-value">0</span>
-        </div>
-        
-        <div id="question-box">
-            <div id="line-display"></div>
-            <div id="current-progress"></div>
-        </div>
-
-        <div id="input-area">
-            <input type="text" id="station-input" placeholder="역 이름을 자유롭게 입력하세요" disabled>
-            <button id="check-button" disabled>확인 (Enter)</button>
-        </div>
-        
-        <p id="message">시작 버튼을 눌러 새로운 게임을 시작하세요.</p>
-        
-        <div id="control-buttons">
-            <button id="start-button">게임 시작</button>
-            <button id="reset-button" style="display: none;">새 게임</button>
-        </div>
-    </div>
-
-    <script src="game.js"></script>
-</body>
-</html>
