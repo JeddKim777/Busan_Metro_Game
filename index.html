@@ -1,4 +1,10 @@
-<style>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚇 부산 지하철 노선도 채우기 게임</title>
+    <style>
         /* 기본 레이아웃 및 스타일 */
         body { font-family: 'Arial', sans-serif; text-align: center; margin: 20px; background-color: #f4f4f4; }
         h1 { color: #333; margin-bottom: 5px; }
@@ -13,11 +19,34 @@
         #score-board { margin-bottom: 25px; font-size: 1.3em; color: #555; }
         #score-board span { font-weight: bold; color: #007bff; margin: 0 5px; }
 
+        /* 노선 선택 및 시작 버튼 영역 */
+        #start-controls { margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 10px; }
+        #line-select { 
+            padding: 10px 15px; 
+            border: 2px solid #007bff; 
+            border-radius: 6px; 
+            font-size: 1em; 
+            cursor: pointer; 
+        }
+        #start-button { 
+            padding: 12px 25px; 
+            background-color: #28a745; 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 1em; 
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        #start-button:hover { background-color: #1e7e34; }
+
+
         /* 문제 영역 */
         #question-box { margin-bottom: 30px; padding: 20px; border: 2px solid #ddd; border-radius: 8px; background-color: #f9f9f9; }
         #line-display { font-size: 1.8em; font-weight: 900; margin-bottom: 15px; }
         
-        /* 🎨 노선도 시각화 (자유 입력, 뽕 채우기 시각화 핵심) */
+        /* 🎨 노선도 시각화 */
         #current-progress { 
             font-family: 'Malgun Gothic', 'Arial', sans-serif; 
             font-size: 1.1em; 
@@ -43,10 +72,10 @@
             padding: 2px 5px;
             border-radius: 4px;
             font-weight: normal;
-            min-width: 30px; /* 너무 짧은 역 이름도 블록처럼 보이게 */
+            min-width: 30px; 
         }
 
-        /* 뽕 채워진 역 스타일 (색상은 game.js에서 lineInfo.color로 설정됨) */
+        /* 뽕 채워진 역 스타일 */
         #current-progress .correct { 
             color: white; 
             font-weight: bold;
@@ -55,12 +84,12 @@
         /* 뽕 뚫린 역 스타일 */
         #current-progress .placeholder { 
             background-color: #f0f0f0; 
-            color: transparent; /* 텍스트 숨기기 */
+            color: transparent; 
             border: 1px dashed #aaa;
             user-select: none;
         }
         
-        /* 연결 라인 디자인 (색상은 game.js에서 lineInfo.color로 설정됨) */
+        /* 연결 라인 디자인 */
         #current-progress .connector {
             display: inline-block;
             width: 25px;
@@ -69,22 +98,21 @@
             vertical-align: middle;
         }
         
-        /* ⭐️ 환승역 다중 색상 시각화 CSS 추가 ⭐️ */
+        /* ⭐️ 환승역 다중 색상 시각화 CSS ⭐️ */
         #current-progress .transfer-station {
-            padding: 0 5px; /* 내부 패딩 제거 (색상 분할을 위해) */
-            height: 25px; /* 높이 고정 (색상 분할 레이어와 맞추기) */
-            line-height: 25px; /* 텍스트 중앙 정렬 */
+            padding: 0 5px; 
+            height: 25px; 
+            line-height: 25px; 
             overflow: hidden;
             position: relative;
         }
         
         #current-progress .transfer-station .station-text {
-            /* 텍스트가 여러 색상 위로 올라오게 z-index 설정 */
             position: relative;
             z-index: 2; 
             display: block;
-            text-shadow: 1px 1px 2px #00000080; /* 어두운 그림자로 가독성 높이기 */
-            padding: 0 2px; /* 텍스트 자체의 좌우 여백 */
+            text-shadow: 1px 1px 2px #00000080; 
+            padding: 0 2px; 
         }
         /* ⭐️ 환승역 다중 색상 시각화 CSS 끝 ⭐️ */
 
@@ -132,6 +160,63 @@
             cursor: pointer;
             font-weight: bold;
         }
-        #start-button { background-color: #28a745; color: white; }
-        #reset-button { background-color: #ffc107; color: #333; }
+        #reset-button { background-color: #ffc107; color: #333; display: none; margin-left: 10px !important; }
+
+        /* 🎨 노선 색상 표 */
+        #line-color-key { 
+            margin-top: 20px; 
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            display: inline-block;
+            text-align: left;
+            font-size: 0.9em;
+        }
+        .line-item { margin-bottom: 5px; }
+        .line-dot { 
+            display: inline-block; 
+            width: 10px; 
+            height: 10px; 
+            border-radius: 50%; 
+            margin-right: 5px; 
+            vertical-align: middle;
+        }
     </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>🚇 부산 지하철 노선도 채우기 게임</h1>
+        
+        <div id="score-board">
+            총점: <span id="score-value">0</span>
+        </div>
+        
+        <div id="start-controls">
+            <select id="line-select">
+                <option value="">-- 노선 선택 --</option>
+                </select>
+            <button id="start-button" disabled>선택 노선 시작</button>
+            <button id="reset-button">새 게임</button>
+        </div>
+
+        <div id="line-color-key">
+            <strong>🌈 노선 색상표</strong><br>
+        </div>
+
+        <div id="question-box">
+            <div id="line-display">원하는 노선을 선택하고 '시작' 버튼을 눌러주세요.</div>
+            <div id="current-progress"></div>
+        </div>
+
+        <div id="input-area">
+            <input type="text" id="station-input" placeholder="역 이름을 자유롭게 입력하세요" disabled>
+            <button id="check-button" disabled>확인 (Enter)</button>
+        </div>
+        
+        <p id="message"></p>
+        
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
