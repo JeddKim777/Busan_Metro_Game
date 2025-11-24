@@ -1,8 +1,8 @@
 // ====================================================================
-// 부산 지하철 노선도 채우기 게임 - game.js (최종 데이터 및 자유 입력 로직)
+// 부산 지하철 노선도 채우기 게임 - game.js (환승역 시각화 최종 반영)
 // ====================================================================
 
-// --- 1. 게임 데이터 (노선별 역 순서) ---
+// --- 1. 게임 데이터 (노선별 역 순서 및 환승 정보) ---
 
 const lineData = {
     "lines": [
@@ -48,11 +48,29 @@ const lineData = {
             "불암", "지내", "김해대학", "인제대", "김해시청", "부원", "봉황", 
             "수로왕릉", "박물관", "연지공원", "장신대", "가야대"
         ]
+    },
+    // 환승역 데이터: {역이름: [환승노선ID1, 환승노선ID2, ...]}
+    // 현재 노선 색상은 자동 포함되므로, 나머지 환승 노선만 넣어주면 됩니다.
+    "transferStations": {
+        "서면": ["line_1", "line_2"],
+        "연산": ["line_1", "line_3"],
+        "수영": ["line_2", "line_3"],
+        "덕천": ["line_2", "line_3"],
+        "사상": ["line_2", "line_bgl"],
+        "대저": ["line_3", "line_bgl"],
+        "미남": ["line_3", "line_4"],
+        "동래": ["line_1", "line_4", "line_k"], // 1, 4, K
+        "교대": ["line_1", "line_k"],
+        "부전": ["line_1", "line_k"],
+        "벡스코": ["line_2", "line_k"],
+        "거제": ["line_3", "line_k"],
+        "센텀": ["line_2", "line_k"] // 센텀시티(2호선)와 센텀(동해선)은 인접하나 이름이 다름. 여기서는 '센텀'(동해선)을 환승역으로 간주.
+        // 역 이름이 겹치는 센텀/벡스코 등의 경우, 사용자가 입력한 이름에 해당하는 모든 환승 정보를 보여줍니다.
     }
 };
 
 
-// --- 2. 전역 변수 및 상태 관리 ---
+// --- 2. 전역 변수 및 상태 관리 (동일) ---
 
 let currentLineId;
 let currentRoute;         
@@ -62,7 +80,7 @@ let score = 0;
 let gameStarted = false;
 
 
-// --- 3. DOM 요소 캐싱 ---
+// --- 3. DOM 요소 캐싱 (동일) ---
 
 const $scoreValue = document.getElementById('score-value');
 const $lineDisplay = document.getElementById('line-display');
@@ -74,7 +92,7 @@ const $resetButton = document.getElementById('reset-button');
 const $checkButton = document.getElementById('check-button');
 
 
-// --- 4. 헬퍼 함수 ---
+// --- 4. 헬퍼 함수 (normalizeInput, getNextLine 동일) ---
 
 // 입력값을 표준화 (띄어쓰기, 특수문자 제거)
 function normalizeInput(input) {
@@ -101,28 +119,69 @@ function getNextLine() {
     return nextLineId;
 }
 
-// 진행 상황을 시각적으로 표시 (맞춘 역은 채워지고, 나머지는 뚫려 있음)
+/**
+ * 진행 상황을 시각적으로 표시하고, 환승역일 경우 색상을 분할하여 표시합니다.
+ * **핵심 로직 변경 부분**
+ */
 function updateProgressDisplay() {
     let display = "";
     const totalGuessed = guessedStations.size;
     const lineInfo = lineData.lines.find(l => l.line_id === currentLineId);
     
+    // 노선 ID를 색상 코드로 변환하는 헬퍼 함수
+    const getLineColor = (lineId) => {
+        const info = lineData.lines.find(l => l.line_id === lineId);
+        return info ? info.color : '#aaaaaa'; // 기본값 회색
+    };
+    
     for (let i = 0; i < currentRoute.length; i++) {
         let stationName = currentRoute[i];
         
-        // 1. 역 이름 블록
         let stationHtml;
         if (guessedStations.has(stationName)) {
-            // 정답: 노선 색상으로 채우기
-            stationHtml = `<span class="station-name correct" style="background-color: ${lineInfo.color};">${stationName}</span>`;
+            
+            // ⭐️ 환승역 처리 로직 시작 ⭐️
+            const transferInfo = lineData.transferStations[stationName];
+            
+            if (transferInfo) {
+                // 현재 노선 ID를 포함한 모든 환승 노선 ID 배열 (Set으로 중복 제거)
+                let allLineIds = new Set([currentLineId, ...transferInfo]);
+                
+                // 모든 노선 ID를 순서대로 배열로 변환
+                const lineIds = Array.from(allLineIds);
+                
+                // 각 노선 색상별로 분할된 HTML 조각을 만듦
+                const colorBlocks = lineIds.map(lineId => {
+                    const color = getLineColor(lineId);
+                    // 너비는 100% / 노선 수로 분할
+                    const widthPercentage = (100 / lineIds.length).toFixed(1) + '%'; 
+                    return `<span style="display: inline-block; background-color: ${color}; width: ${widthPercentage}; height: 100%; float: left;"></span>`;
+                }).join('');
+                
+                // 역 이름을 담는 컨테이너
+                stationHtml = `
+                    <span class="station-name correct transfer-station" style="background-color: transparent; position: relative; overflow: hidden; color: white; font-weight: bold;">
+                        <span class="color-split-background" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; display: flex;">
+                            ${colorBlocks}
+                        </span>
+                        <span class="station-text" style="position: relative; z-index: 2;">${stationName}</span>
+                    </span>
+                `;
+
+            } else {
+                // 일반역 (단일 색상)
+                stationHtml = `<span class="station-name correct" style="background-color: ${lineInfo.color};">${stationName}</span>`;
+            }
+            // ⭐️ 환승역 처리 로직 끝 ⭐️
+
         } else {
-            // 미정답: 빈 블록
+            // 미정답 역
             stationHtml = `<span class="station-name placeholder">${'•'.repeat(stationName.length)}</span>`; 
         }
 
         display += `<span class="station-wrapper">${stationHtml}</span>`;
         
-        // 2. 연결선 (노선 색상 적용)
+        // 연결선
         if (i < currentRoute.length - 1) {
             display += `<span class="connector" style="background-color: ${lineInfo.color};"></span>`; 
         }
@@ -133,10 +192,14 @@ function updateProgressDisplay() {
     display += `<br><br>남은 역: ${remaining}개 / 총 ${totalStations}개`;
     
     $currentProgress.innerHTML = display;
+    
+    // *주의: 환승역 시각화를 위해 CSS를 소폭 수정해야 합니다. 
+    // 아래 스타일은 game.js 대신 index.html의 <style> 태그에 추가되어야 합니다.
+    // 하지만 현재는 index.html 수정이 번거로우므로, game.js의 로직으로 최대한 구현했습니다.
 }
 
 
-// --- 5. 게임 로직 함수 ---
+// --- 5. 게임 로직 함수 (동일) ---
 
 // 게임 시작
 function startGame() {
@@ -148,7 +211,6 @@ function startGame() {
     $startButton.style.display = 'none';
     $resetButton.style.display = 'inline-block';
     
-    // 입력 기능 활성화
     $stationInput.disabled = false;
     $checkButton.disabled = false;
     $stationInput.focus();
@@ -186,7 +248,6 @@ function checkAnswer() {
 
     const normalizedInput = normalizeInput(input);
     
-    // 순서 무시, 노선 내 전체 역에서 검색하여 일치하는 역을 찾음
     const correctStation = currentRoute.find(station => normalizeInput(station) === normalizedInput);
     
     if (correctStation) {
@@ -219,7 +280,6 @@ function checkAnswer() {
             $stationInput.disabled = true;
             $checkButton.disabled = true;
             
-            // 3초 후 다음 라운드 시작
             setTimeout(() => {
                 $stationInput.disabled = false;
                 $checkButton.disabled = false;
@@ -253,14 +313,13 @@ function resetGame() {
 }
 
 
-// --- 6. 이벤트 리스너 ---
+// --- 6. 이벤트 리스너 (동일) ---
 
 window.onload = () => {
     $startButton.addEventListener('click', startGame);
     $resetButton.addEventListener('click', resetGame);
     $checkButton.addEventListener('click', checkAnswer);
 
-    // Enter 키로 정답 확인 기능
     $stationInput.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
             event.preventDefault(); 
