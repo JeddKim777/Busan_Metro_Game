@@ -93,10 +93,10 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // 전역 변수 설정
+        // 전역 변수 설정 (game.js와 충돌 방지)
         window.INITIAL_ZOOM = 12;
         window.BUSAN_CENTER_LOC = [35.1780, 129.0756]; 
-        window.map = null; // 초기에는 맵 객체를 null로 설정
+        window.map = null; 
 
         function initializeMap() {
             if (typeof L === 'undefined') {
@@ -107,17 +107,16 @@
             // 지도 객체 생성 및 전역 변수에 저장
             window.map = L.map('map').setView(window.BUSAN_CENTER_LOC, window.INITIAL_ZOOM); 
 
-            // 배경 지도 타일 추가
+            // 배경 지도 (OpenStreetMap) 타일 추가
             L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© OpenStreetMap'
             }).addTo(window.map);
             
-            // ⭐ 최종 안정화: 맵 생성 직후 크기 강제 재계산
+            // 최종 안정화: 맵 생성 직후 크기 강제 재계산
             setTimeout(() => {
                 if(window.map) {
                     window.map.invalidateSize();
-                    // 초기 뷰로 다시 이동하여 중심을 명확히 함
                     window.map.setView(window.BUSAN_CENTER_LOC, window.INITIAL_ZOOM);
                     console.log("지도 크기 재계산(invalidateSize) 완료.");
                 }
