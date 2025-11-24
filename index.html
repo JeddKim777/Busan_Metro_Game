@@ -3,136 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>부산 지하철 노선 기억 게임</title>
-
-    <link rel="icon" type="image/png" href="favicon.png"> 
-
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-
+    <title>🚇 부산 지하철 노선도 채우기 게임</title>
     <style>
-        /* A. 레이아웃: 화면 전체를 채우고 Flexbox를 사용해 #map에 남은 공간을 부여 */
-        body, html {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden; 
-            font-family: Arial, sans-serif;
-            display: flex; /* 핵심: 가로 분할을 위해 플렉스 컨테이너 설정 */
-        }
+        /* 기본 스타일 */
+        body { font-family: 'Arial', sans-serif; text-align: center; margin: 20px; background-color: #f4f4f4; }
+        h1 { color: #333; margin-bottom: 5px; }
+        #game-container { background-color: #fff; padding: 25px; border-radius: 12px; max-width: 700px; margin: 20px auto; box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
 
-        /* B. 지도 영역 (#map)이 나머지 공간을 모두 차지하도록 설정 (높이 100% 보장) */
-        #map {
-            flex-grow: 1; /* 남은 공간 모두 차지 (가로) */
-            height: 100%; /* 부모(body)의 높이 상속 (세로) */
-            min-width: 0; /* Flexbox 버그 방지 */
-            z-index: 0; 
-        }
+        /* 점수판 */
+        #score-board { margin-bottom: 25px; font-size: 1.3em; color: #555; }
+        #score-board span { font-weight: bold; color: #007bff; margin: 0 5px; }
 
-        /* C. 게임 오버레이 (왼쪽 패널) 스타일 */
-        #game-overlay {
-            width: 300px; /* 고정 너비 */
-            height: 100%;
-            background-color: #f7f7f7;
-            padding: 20px;
-            box-sizing: border-box;
-            border-right: 1px solid #ccc;
-            overflow-y: auto; 
-            z-index: 1; 
-            flex-shrink: 0; /* 축소되지 않도록 고정 */
-        }
-
-        /* D. UI 요소 스타일 (기존 스타일 유지) */
-        .status-box { background-color: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); margin-bottom: 20px; }
-        .input-section { display: flex; gap: 10px; margin-bottom: 15px; }
-        #input-station { flex-grow: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        #btn-submit { background-color: #4CAF50; color: white; }
-        #btn-start { background-color: #007bff; color: white; width: 100%; }
-        #guessed-list { list-style: none; padding: 0; margin: 0; max-height: 400px; overflow-y: auto; }
+        /* 문제 영역 */
+        #question-box { margin-bottom: 30px; padding: 20px; border: 2px solid #ddd; border-radius: 8px; background-color: #f9f9f9; }
+        #line-display { font-size: 1.8em; font-weight: 900; margin-bottom: 15px; }
         
-        #guessed-list li { 
-            padding: 5px 0; 
-            border-bottom: 1px dotted #eee; 
-            color: #555; 
-            display: flex; 
-            align-items: center;
+        /* 진행 상황 표시 */
+        #current-progress { 
+            font-family: 'Consolas', monospace; 
+            font-size: 1.1em; 
+            white-space: pre-wrap; 
+            text-align: center; 
+            background-color: #eee; 
+            padding: 15px 10px; 
+            border-radius: 6px; 
+            line-height: 1.8;
+            word-break: break-word;
         }
+
+        /* 입력 및 버튼 */
+        #input-area { display: flex; justify-content: center; gap: 10px; margin-top: 25px; }
+        #station-input { 
+            padding: 12px 15px; 
+            border: 3px solid #007bff; 
+            border-radius: 6px; 
+            flex-grow: 1; 
+            max-width: 300px; 
+            font-size: 1.1em; 
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        #station-input:focus {
+            border-color: #0056b3;
+        }
+        #check-button { 
+            padding: 12px 25px; 
+            background-color: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 1.1em; 
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        #check-button:hover {
+            background-color: #0056b3;
+        }
+        
+        /* 메시지 */
+        #message { margin-top: 20px; min-height: 20px; }
+
+        /* 상태별 텍스트 */
+        .correct { color: #28a745; font-weight: bold; }
+        .missed { color: #dc3545; font-weight: bold; }
+        .placeholder { color: #aaa; }
+        .next-station { color: #dc3545; font-weight: bold; text-decoration: underline; }
+        
+        /* 컨트롤 버튼 */
+        #control-buttons { margin-top: 20px; }
+        #control-buttons button {
+            padding: 10px 20px;
+            margin: 0 5px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #start-button { background-color: #28a745; color: white; }
+        #reset-button { background-color: #ffc107; color: #333; }
 
     </style>
 </head>
 <body>
-
-    <div id="game-overlay">
-        <h2>부산 지하철 찾기 게임</h2>
-        <div class="score-info status-box">
-            <p>라운드: <span id="round-display">0</span></p>
-            <p>점수: <span id="score-display">0</span></p>
+    <div id="game-container">
+        <h1>🚇 부산 지하철 노선도 채우기 게임</h1>
+        
+        <div id="score-board">
+            총점: <span id="score-value">0</span> | 연속 정답: <span id="streak-value">0</span>
         </div>
         
-        <p id="status-message">게임을 시작해 주세요!</p>
-
-        <button id="btn-start" class="btn">게임 시작</button>
-        
-        <button id="btn-end-game" class="btn" style="background-color: #dc3545; color: white; width: 100%; margin-top: 10px; display: none;">게임 종료 및 노선 보기</button>
-
-        <h3>역 이름을 입력해 주세요!</h3>
-        <div class="input-section">
-            <input type="text" id="input-station" placeholder="예: 서면" disabled>
-            <button id="btn-submit" class="btn" disabled>제출</button>
+        <div id="question-box">
+            <div id="line-display"></div>
+            <div id="current-progress"></div>
         </div>
 
-        <div id="guessed-stations-container">
-            <h3>맞힌 역 목록 (<span id="guessed-count">0</span>/<span id="total-stations">0</span>개)</h3>
-            <ul id="guessed-list">
-                </ul>
+        <div id="input-area">
+            <input type="text" id="station-input" placeholder="다음 역 이름을 입력하세요" disabled>
+            <button id="check-button" disabled>확인 (Enter)</button>
+        </div>
+        
+        <p id="message">시작 버튼을 눌러 게임을 시작하세요.</p>
+        
+        <div id="control-buttons">
+            <button id="start-button">게임 시작</button>
+            <button id="reset-button" style="display: none;">새 게임</button>
         </div>
     </div>
 
-    <div id="map"></div>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-    <script>
-        // 전역 변수 설정 (game.js와 충돌 방지)
-        window.INITIAL_ZOOM = 12;
-        window.BUSAN_CENTER_LOC = [35.1780, 129.0756]; 
-        window.map = null; 
-
-        function initializeMap() {
-            if (typeof L === 'undefined') {
-                console.error("Leaflet 라이브러리가 로드되지 않았습니다.");
-                return;
-            }
-
-            // 지도 객체 생성 및 전역 변수에 저장
-            window.map = L.map('map').setView(window.BUSAN_CENTER_LOC, window.INITIAL_ZOOM); 
-
-            // 배경 지도 (OpenStreetMap) 타일 추가
-            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap'
-            }).addTo(window.map);
-            
-            // 최종 안정화: 맵 생성 직후 크기 강제 재계산
-            setTimeout(() => {
-                if(window.map) {
-                    window.map.invalidateSize();
-                    window.map.setView(window.BUSAN_CENTER_LOC, window.INITIAL_ZOOM);
-                    console.log("지도 크기 재계산(invalidateSize) 완료.");
-                }
-            }, 100); 
-
-            // 초기 UI 상태 설정
-            document.getElementById('btn-submit').disabled = true;
-            document.getElementById('input-station').disabled = true;
-
-        }
-
-        // 페이지 로드 완료 후 맵 초기화 함수 실행
-        window.onload = initializeMap;
-    </script>
-
-    <script src="game.js"></script> 
-
+    <script src="game.js"></script>
 </body>
 </html>
