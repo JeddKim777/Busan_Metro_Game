@@ -1,5 +1,5 @@
 // ====================================================================
-// 부산 지하철 노선도 채우기 게임 - game.js (최종 완성본)
+// 부산 지하철 노선도 채우기 게임 - game.js (최종 완성본 - 노선 선택 기능 추가)
 // ====================================================================
 
 // --- 1. 게임 데이터 (노선별 역 순서 및 환승 정보) ---
@@ -7,12 +7,12 @@
 const lineData = {
     // ⭐️ 사용자 지정 최종 색상 반영 (2호선 유효 색상으로 수정) ⭐️
     "lines": [
-        {"line_id": "line_1", "name": "1호선", "color": "#F06A00"}, // 주황
-        {"line_id": "line_2", "name": "2호선", "color": "#48B41B"}, // 녹색 (사용자 입력 #F81BF48을 유효한 녹색 #48B41B로 수정)
-        {"line_id": "line_3", "name": "3호선", "color": "#BB8C00"}, // 황토
-        {"line_id": "line_4", "name": "4호선", "color": "#217DCB"}, // 파랑
-        {"line_id": "line_bgl", "name": "부산김해경전철", "color": "#875CAC"}, // 보라
-        {"line_id": "line_k", "name": "동해선", "color": "#0054A6"} // 진한 파랑
+        {"line_id": "line_1", "name": "1호선", "color": "#F06A00"}, 
+        {"line_id": "line_2", "name": "2호선", "color": "#48B41B"}, 
+        {"line_id": "line_3", "name": "3호선", "color": "#BB8C00"}, 
+        {"line_id": "line_4", "name": "4호선", "color": "#217DCB"}, 
+        {"line_id": "line_bgl", "name": "부산김해경전철", "color": "#875CAC"}, 
+        {"line_id": "line_k", "name": "동해선", "color": "#0054A6"}
     ],
     "routes": {
         // 1호선 (40개 역)
@@ -50,7 +50,7 @@ const lineData = {
             "수로왕릉", "박물관", "연지공원", "장신대", "가야대"
         ]
     },
-    // 환승역 데이터 (환승 노선 색상 분할 시각화를 위해 사용)
+    // 환승역 데이터
     "transferStations": {
         "서면": ["line_1", "line_2"],
         "연산": ["line_1", "line_3"],
@@ -69,7 +69,7 @@ const lineData = {
 };
 
 
-// --- 2. 전역 변수 및 상태 관리 (동일) ---
+// --- 2. 전역 변수 및 상태 관리 ---
 
 let currentLineId;
 let currentRoute;         
@@ -79,7 +79,7 @@ let score = 0;
 let gameStarted = false;
 
 
-// --- 3. DOM 요소 캐싱 (동일) ---
+// --- 3. DOM 요소 캐싱 ---
 
 const $scoreValue = document.getElementById('score-value');
 const $lineDisplay = document.getElementById('line-display');
@@ -89,9 +89,37 @@ const $message = document.getElementById('message');
 const $startButton = document.getElementById('start-button');
 const $resetButton = document.getElementById('reset-button');
 const $checkButton = document.getElementById('check-button');
+const $lineSelect = document.getElementById('line-select');
+const $lineColorKey = document.getElementById('line-color-key');
 
 
-// --- 4. 헬퍼 함수 ---
+// --- 4. 초기화 및 UI 생성 함수 ---
+
+// 노선 선택 드롭다운 및 색상표를 채웁니다.
+function populateLineSelectors() {
+    // 1. 드롭다운 옵션 채우기
+    lineData.lines.forEach(line => {
+        const option = document.createElement('option');
+        option.value = line.line_id;
+        option.textContent = `${line.name} (총 ${lineData.routes[line.line_id].length}개 역)`;
+        $lineSelect.appendChild(option);
+    });
+
+    // 2. 노선 색상표 채우기
+    let keyHtml = '<strong>🌈 노선 색상표</strong><br>';
+    lineData.lines.forEach(line => {
+        keyHtml += `
+            <div class="line-item">
+                <span class="line-dot" style="background-color: ${line.color};"></span>
+                ${line.name}
+            </div>
+        `;
+    });
+    $lineColorKey.innerHTML = keyHtml;
+}
+
+
+// --- 5. 헬퍼 함수 ---
 
 // 입력값을 표준화 (띄어쓰기, 특수문자 제거)
 function normalizeInput(input) {
@@ -102,21 +130,11 @@ function normalizeInput(input) {
                 .toLowerCase();
 }
 
-// 다음 문제 (다음 노선) 선택
-function getNextLine() {
-    const lineIds = Object.keys(lineData.routes);
-    if (lineIds.length === 0) return null;
-    
-    let nextLineId;
-    let attempts = 0;
-    do {
-        const randomIndex = Math.floor(Math.random() * lineIds.length);
-        nextLineId = lineIds[randomIndex];
-        attempts++;
-    } while (nextLineId === currentLineId && lineIds.length > 1 && attempts < 10); 
-
-    return nextLineId;
-}
+// 노선 ID를 색상 코드로 변환
+const getLineColor = (lineId) => {
+    const info = lineData.lines.find(l => l.line_id === lineId);
+    return info ? info.color : '#aaaaaa'; 
+};
 
 /**
  * 진행 상황을 시각적으로 표시하고, 환승역일 경우 색상을 분할하여 표시합니다.
@@ -126,11 +144,6 @@ function updateProgressDisplay() {
     const totalGuessed = guessedStations.size;
     const lineInfo = lineData.lines.find(l => l.line_id === currentLineId);
     
-    // 노선 ID를 색상 코드로 변환하는 헬퍼 함수
-    const getLineColor = (lineId) => {
-        const info = lineData.lines.find(l => l.line_id === lineId);
-        return info ? info.color : '#aaaaaa'; 
-    };
     
     for (let i = 0; i < currentRoute.length; i++) {
         let stationName = currentRoute[i];
@@ -193,35 +206,37 @@ function updateProgressDisplay() {
 }
 
 
-// --- 5. 게임 로직 함수 (동일) ---
+// --- 6. 게임 로직 함수 ---
 
-// 게임 시작
+// 게임 시작 (사용자가 선택한 노선으로 시작)
 function startGame() {
-    if (gameStarted) return;
+    const selectedLineId = $lineSelect.value;
+    if (!selectedLineId) {
+        $message.textContent = "노선을 먼저 선택해주세요.";
+        return;
+    }
     
     gameStarted = true;
     score = 0;
     $scoreValue.textContent = score;
-    $startButton.style.display = 'none';
+    
+    // UI 상태 변경
+    $lineSelect.disabled = true;
+    $startButton.disabled = true;
     $resetButton.style.display = 'inline-block';
     
     $stationInput.disabled = false;
     $checkButton.disabled = false;
     $stationInput.focus();
     
-    $message.textContent = "게임을 시작합니다! 노선도에 채울 역 이름을 자유롭게 입력하세요.";
+    $message.textContent = "게임 시작! 노선도에 채울 역 이름을 자유롭게 입력하세요.";
 
-    startNextLine();
+    startLine(selectedLineId);
 }
 
-// 다음 노선으로 이동 (새로운 라운드)
-function startNextLine() {
-    currentLineId = getNextLine();
-    if (!currentLineId) {
-        $message.textContent = "오류: 노선 데이터가 없습니다.";
-        return;
-    }
-    
+// 선택된 노선으로 라운드 시작
+function startLine(lineId) {
+    currentLineId = lineId;
     currentRoute = lineData.routes[currentLineId];
     totalStations = currentRoute.length;
     guessedStations = new Set(); 
@@ -232,6 +247,7 @@ function startNextLine() {
     $stationInput.value = "";
     updateProgressDisplay();
 }
+
 
 // 정답 확인 (자유 입력 로직)
 function checkAnswer() {
@@ -267,19 +283,13 @@ function checkAnswer() {
         
         if (guessedStations.size === totalStations) {
             // 노선 완료!
-            $message.innerHTML = `<span style="color: blue; font-weight: bold;">🎉 축하합니다! ${lineData.lines.find(l => l.line_id === currentLineId).name} 노선 완주! (보너스 +50점)</span>`;
+            const lineName = lineData.lines.find(l => l.line_id === currentLineId).name;
+            $message.innerHTML = `<span style="color: blue; font-weight: bold;">🎉 축하합니다! ${lineName} 노선 완주! (보너스 +50점)</span>`;
             score += 50;
             $scoreValue.textContent = score;
             
-            $stationInput.disabled = true;
-            $checkButton.disabled = true;
-            
-            setTimeout(() => {
-                $stationInput.disabled = false;
-                $checkButton.disabled = false;
-                $stationInput.focus();
-                startNextLine();
-            }, 3000); 
+            // 완주 후 게임 종료 상태로 전환
+            endGame();
         }
     } else {
         // --- 오답 처리 ---
@@ -290,30 +300,49 @@ function checkAnswer() {
     }
 }
 
-// 게임 리셋
+// 노선 완주 시 게임 종료
+function endGame() {
+    gameStarted = false;
+    $stationInput.disabled = true;
+    $checkButton.disabled = true;
+    $lineSelect.disabled = false;
+    $startButton.disabled = true; // 완주 후에는 '새 게임'만 가능하도록
+    $lineDisplay.textContent = "노선을 완주하셨습니다! 새로운 노선을 선택해 주세요.";
+}
+
+
+// 게임 리셋 (노선 선택 상태로 돌아감)
 function resetGame() {
     gameStarted = false;
     score = 0;
     $scoreValue.textContent = 0;
-    $lineDisplay.textContent = "";
+    
+    // UI 초기 상태로 복구
+    $lineSelect.disabled = false;
+    $startButton.disabled = true;
+    $resetButton.style.display = 'none';
+    $lineSelect.value = "";
+    
+    $lineDisplay.textContent = "원하는 노선을 선택하고 '시작' 버튼을 눌러주세요.";
     $currentProgress.textContent = "";
     $stationInput.value = "";
     $stationInput.disabled = true;
     $checkButton.disabled = true;
 
-    $message.textContent = "시작 버튼을 눌러 새로운 게임을 시작하세요.";
-    $startButton.style.display = 'inline-block';
-    $resetButton.style.display = 'none';
+    $message.textContent = "새로운 게임을 시작하려면 노선을 선택하세요.";
 }
 
 
-// --- 6. 이벤트 리스너 (동일) ---
+// --- 7. 이벤트 리스너 ---
 
 window.onload = () => {
+    populateLineSelectors(); // 페이지 로드 시 노선 정보 채우기
+
     $startButton.addEventListener('click', startGame);
     $resetButton.addEventListener('click', resetGame);
     $checkButton.addEventListener('click', checkAnswer);
 
+    // Enter 키로 정답 확인 기능
     $stationInput.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
             event.preventDefault(); 
@@ -321,5 +350,21 @@ window.onload = () => {
         }
     });
 
-    resetGame();
+    // 노선 선택 시 시작 버튼 활성화
+    $lineSelect.addEventListener('change', () => {
+        if ($lineSelect.value && !gameStarted) {
+            $startButton.disabled = false;
+            $message.textContent = `선택하신 노선으로 시작 버튼을 눌러주세요.`;
+        } else if (!gameStarted) {
+            $startButton.disabled = true;
+            $message.textContent = `새로운 게임을 시작하려면 노선을 선택하세요.`;
+        }
+        
+        // 새로운 노선을 선택하면 진행 중인 게임은 리셋
+        if (gameStarted) {
+            resetGame();
+        }
+    });
+
+    resetGame(); // 초기 상태로 설정
 };
