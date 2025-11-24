@@ -1,5 +1,5 @@
 // ====================================================================
-// 부산 지하철 노선도 채우기 게임 - game.js (자유 입력 방식 최종 로직)
+// 부산 지하철 노선도 채우기 게임 - game.js (최종 데이터 반영)
 // ====================================================================
 
 // --- 1. 게임 데이터 (노선별 역 순서) ---
@@ -21,12 +21,12 @@ const lineData = {
             "부전", "양정", "시청", "연산", "교대", "동래", "명륜", "온천장", "부산대", "장전", "구서", "두실", "남산", 
             "범어사", "노포"
         ],
-        // 2호선 (40개 역)
+        // 2호선 (43개 역) - 최종 수정 반영 완료
         "line_2": [
             "장산", "중동", "해운대", "동백", "벡스코", "센텀시티", "민락", "수영", "광안", "금련산", "남천", "경성대·부경대", 
-            "대연", "못골", "지게골", "문현", "국제금융센터·부산은행", "서면", "부암", "가야", "동의대", "개금", "냉정", 
-            "주례", "감전", "사상", "덕포", "모라", "구남", "구명", "덕천", "수정", "화명", "율리", "금곡", "호포", 
-            "증산", "부산대양산캠퍼스", "남양산", "양산"
+            "대연", "못골", "지게골", "문현", "국제금융센터·부산은행", "전포", "서면", "부암", "가야", "동의대", "개금", 
+            "냉정", "주례", "감전", "사상", "덕포", "모라", "모덕", "구남", "구명", "덕천", "수정", "화명", "동원", 
+            "금곡", "호포", "증산", "부산대양산캠퍼스", "남양산", "양산"
         ],
         // 3호선 (17개 역)
         "line_3": [
@@ -37,15 +37,19 @@ const lineData = {
         "line_4": [
             "미남", "동래", "낙민", "충렬사", "명장", "서동", "금사", "반여농산물시장", "석대", "영산대", "고촌", "안평"
         ],
-        // 동해선 (20개 역 - 부전 ~ 태화강 기준)
+        // 동해선 (23개 역)
         "line_k": [
-            "부전", "거제해맞이", "거제", "교대", "동래", "안락", "재송", "센텀", "벡스코", "신해운대", "송정", "오시리아", 
-            "기장", "일광", "좌천", "월내", "원자력의학원", "남창", "서생", "태화강" 
+            "부전", "거제해맞이", "거제", "교대", "동래", "안락", "재송", "센텀", "벡스코", 
+            "신해운대", "송정", "오시리아", "기장", "일광", "좌천", "월내", "고리",
+            "신설리",
+            "서생", "남창", "망양", 
+            "덕하", "태화강" 
         ],
         // 부산김해경전철 (18개 역)
         "line_bgl": [
-            "사상", "괘법르네시떼", "서부산유통지구", "공항", "대저", "평강", "대사", "불암", "김해대학", "지내", 
-            "김해시청", "부원", "봉황", "수로왕릉", "박물관", "연지공원", "장신대", "가야대"
+            "사상", "괘법르네시떼", "서부산유통지구", "공항", "대저", "평강", "대사", 
+            "불암", "김해대학", "지내", "김해시청", "부원", "봉황", 
+            "수로왕릉", "박물관", "연지공원", "장신대", "가야대"
         ]
     }
 };
@@ -54,9 +58,9 @@ const lineData = {
 // --- 2. 전역 변수 및 상태 관리 ---
 
 let currentLineId;
-let currentRoute;         // 현재 노선의 전체 역 이름 배열
-let guessedStations;      // 사용자가 맞춘 역 이름을 저장하는 Set
-let totalStations;        // 현재 노선의 전체 역 개수
+let currentRoute;         
+let guessedStations;      
+let totalStations;        
 let score = 0;
 let gameStarted = false;
 
@@ -75,12 +79,12 @@ const $checkButton = document.getElementById('check-button');
 
 // --- 4. 헬퍼 함수 ---
 
-// 입력값을 표준화 (띄어쓰기, 가운뎃점 등 제거)하여 비교 정확도를 높임
+// 입력값을 표준화 
 function normalizeInput(input) {
     return input.trim()
-                .replace(/ /g, '')      // 띄어쓰기 제거
-                .replace(/-/g, '')      // 하이픈 제거
-                .replace(/·/g, '')      // 가운뎃점 제거
+                .replace(/ /g, '')
+                .replace(/-/g, '')
+                .replace(/·/g, '')
                 .toLowerCase();
 }
 
@@ -89,7 +93,6 @@ function getNextLine() {
     const lineIds = Object.keys(lineData.routes);
     if (lineIds.length === 0) return null;
     
-    // 무작위로 하나의 노선 선택 (단, 이전 노선과 겹치지 않게 시도)
     let nextLineId;
     let attempts = 0;
     do {
@@ -101,7 +104,7 @@ function getNextLine() {
     return nextLineId;
 }
 
-// 진행 상황을 시각적으로 표시 (맞춘 역은 채워지고, 나머지는 뚫려 있음)
+// 진행 상황을 시각적으로 표시
 function updateProgressDisplay() {
     let display = "";
     const totalGuessed = guessedStations.size;
@@ -113,11 +116,8 @@ function updateProgressDisplay() {
         // 1. 역 이름 블록
         let stationHtml;
         if (guessedStations.has(stationName)) {
-            // 맞춘 역: 채워짐 (노선 색상을 배경으로 사용하는 것도 가능)
-            // 현재는 index.html의 .correct 스타일을 사용합니다.
             stationHtml = `<span class="station-name correct" style="background-color: ${lineInfo.color};">${stationName}</span>`;
         } else {
-            // 맞추지 못한 역: 뚫린 상태
             stationHtml = `<span class="station-name placeholder">${'•'.repeat(stationName.length)}</span>`; 
         }
 
@@ -125,7 +125,6 @@ function updateProgressDisplay() {
         
         // 2. 연결선
         if (i < currentRoute.length - 1) {
-            // 연결선에 노선 색상을 적용
             display += `<span class="connector" style="background-color: ${lineInfo.color};"></span>`; 
         }
     }
@@ -150,7 +149,6 @@ function startGame() {
     $startButton.style.display = 'none';
     $resetButton.style.display = 'inline-block';
     
-    // 입력/확인 활성화
     $stationInput.disabled = false;
     $checkButton.disabled = false;
     $stationInput.focus();
@@ -170,10 +168,10 @@ function startNextLine() {
     
     currentRoute = lineData.routes[currentLineId];
     totalStations = currentRoute.length;
-    guessedStations = new Set(); // 맞춘 역 목록 초기화
+    guessedStations = new Set(); 
 
     const lineInfo = lineData.lines.find(l => l.line_id === currentLineId);
-    $lineDisplay.innerHTML = `<span style="color: ${lineInfo.color};">${lineInfo.name}</span> 노선 채우기`;
+    $lineDisplay.innerHTML = `<span style="color: ${lineInfo.color};">${lineInfo.name}</span> 노선 채우기 (총 ${totalStations}개 역)`;
     
     $stationInput.value = "";
     updateProgressDisplay();
@@ -188,11 +186,9 @@ function checkAnswer() {
 
     const normalizedInput = normalizeInput(input);
     
-    // 노선 목록에서 역 찾기
     const correctStation = currentRoute.find(station => normalizeInput(station) === normalizedInput);
     
     if (correctStation) {
-        // 이미 맞춘 역인지 확인
         if (guessedStations.has(correctStation)) {
              $message.innerHTML = `<span style="color: orange;">이미 맞춘 역입니다: ${correctStation}</span>`;
              $stationInput.value = "";
@@ -204,7 +200,7 @@ function checkAnswer() {
         score += 10; 
         $scoreValue.textContent = score;
         
-        guessedStations.add(correctStation); // 정답 역을 Set에 추가
+        guessedStations.add(correctStation); 
         
         $message.innerHTML = `<span style="color: green; font-weight: bold;">✅ 정답! ${correctStation} 역을 채웠습니다.</span>`;
         
@@ -219,7 +215,6 @@ function checkAnswer() {
             score += 50;
             $scoreValue.textContent = score;
             
-            // 입력창 비활성화 및 다음 라운드 준비
             $stationInput.disabled = true;
             $checkButton.disabled = true;
             
@@ -259,12 +254,10 @@ function resetGame() {
 // --- 6. 이벤트 리스너 ---
 
 window.onload = () => {
-    // 버튼 이벤트 연결
     $startButton.addEventListener('click', startGame);
     $resetButton.addEventListener('click', resetGame);
     $checkButton.addEventListener('click', checkAnswer);
 
-    // Enter 키로 정답 확인
     $stationInput.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
             event.preventDefault(); 
@@ -272,6 +265,5 @@ window.onload = () => {
         }
     });
 
-    // 초기 상태 설정
     resetGame();
 };
